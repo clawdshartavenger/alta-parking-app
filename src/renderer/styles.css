@@ -15,10 +15,23 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Titlebar - draggable region at top of window */
+.titlebar {
+  height: 32px;
+  width: 100%;
+  -webkit-app-region: drag;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
 .container {
   max-width: 600px;
   margin: 0 auto;
   padding: 24px;
+  padding-top: 40px; /* Account for fixed titlebar */
 }
 
 /* Header - draggable region for window movement */
