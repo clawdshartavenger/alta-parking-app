@@ -161,29 +161,27 @@ ipcMain.handle('start-monitor', async (event, config) => {
       }
     };
 
-    // Start monitor (runs until cancelled or booked)
-    const result = await startMonitor(monitorConfig, onStatus, signal);
-
-    if (result.booked) {
-      sendStatus('success', 'Parking successfully booked!');
-    }
+    // Start monitor (fire and forget - don't await)
+    startMonitor(monitorConfig, onStatus, signal)
+      .then((result) => {
+        if (result.booked) {
+          sendStatus('success', 'Parking successfully booked!');
+        }
+        monitorAbortController = null;
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError' && !signal.aborted) {
+          console.error('Monitor error:', error);
+          sendStatus('error', `Monitor error: ${error.message}`);
+        }
+        monitorAbortController = null;
+      });
 
     return { success: true };
   } catch (error) {
-    // Check if aborted (not an error)
-    if (error.name === 'AbortError' || signal.aborted) {
-      sendStatus('idle', 'Monitoring stopped');
-      return { success: true };
-    }
-
-    console.error('Monitor error:', error);
+    console.error('Failed to start monitor:', error);
     sendStatus('error', `Error: ${error.message}`);
     return { success: false, error: error.message };
-  } finally {
-    // Clear controller if this one finished
-    if (monitorAbortController?.signal === signal) {
-      monitorAbortController = null;
-    }
   }
 });
 
