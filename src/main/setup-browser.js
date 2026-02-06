@@ -23,26 +23,51 @@ function isChromiumInstalled() {
   return dirs.some(d => d.startsWith('chromium'));
 }
 
-// Download Chromium using npx playwright install
+// Download Chromium using Playwright's registry API
 async function downloadChromium(onProgress) {
-  return new Promise((resolve, reject) => {
-    onProgress('Downloading Chromium browser...');
+  onProgress('Downloading Chromium browser...');
+  
+  try {
+    // Use Playwright's internal browser fetcher
+    const { registry } = require('playwright-core/lib/server');
+    const browserType = registry.findExecutable('chromium');
     
-    try {
-      // Use npx to run playwright install chromium
-      const result = execSync('npx playwright install chromium', {
-        encoding: 'utf8',
-        timeout: 300000, // 5 minute timeout
-        cwd: app.getPath('userData'),
-      });
-      
+    if (browserType) {
+      onProgress('Installing Chromium (this may take a minute)...');
+      await registry.install([browserType.name], false);
       onProgress('Browser installed successfully!');
-      resolve(true);
-    } catch (err) {
-      onProgress(`Error: ${err.message}`);
-      reject(err);
+      return true;
     }
-  });
+    
+    // Fallback: try direct CLI path
+    const possiblePaths = [
+      '/opt/homebrew/bin/npx',
+      '/usr/local/bin/npx',
+      '/usr/bin/npx',
+      process.env.HOME + '/.nvm/versions/node/*/bin/npx',
+    ];
+    
+    for (const npxPath of possiblePaths) {
+      try {
+        if (require('fs').existsSync(npxPath.replace('*', ''))) {
+          onProgress('Installing via npx...');
+          execSync(`${npxPath} playwright install chromium`, {
+            encoding: 'utf8',
+            timeout: 300000,
+          });
+          onProgress('Browser installed successfully!');
+          return true;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    throw new Error('Could not find a way to install Chromium');
+  } catch (err) {
+    onProgress(`Error: ${err.message}`);
+    throw err;
+  }
 }
 
 // Show dialog and handle first-run setup
