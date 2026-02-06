@@ -12,7 +12,6 @@ const { app, BrowserWindow, ipcMain, Notification } = require('electron');
 const path = require('path');
 const { saveCredentials, loadCredentials } = require('./keychain');
 const { startMonitor } = require('../monitor/parking');
-const { ensureBrowserInstalled } = require('./setup-browser');
 
 let mainWindow = null;
 let monitorAbortController = null;
@@ -84,8 +83,15 @@ function getChromiumPath() {
   const resourcesPath = process.resourcesPath || path.join(__dirname, '../../..');
   const chromiumDir = path.join(resourcesPath, 'chromium');
   
-  // macOS Chromium path
-  return path.join(chromiumDir, 'Chromium.app/Contents/MacOS/Chromium');
+  // Playwright's Chrome for Testing path
+  return path.join(
+    chromiumDir, 
+    'chrome-mac-arm64',
+    'Google Chrome for Testing.app',
+    'Contents',
+    'MacOS',
+    'Google Chrome for Testing'
+  );
 }
 
 // IPC Handlers
@@ -195,14 +201,8 @@ ipcMain.handle('stop-monitor', async () => {
 
 // App lifecycle events
 
-app.whenReady().then(async () => {
+app.whenReady().then(() => {
   createWindow();
-  
-  // Check for browser on first run
-  const browserReady = await ensureBrowserInstalled(mainWindow);
-  if (!browserReady) {
-    sendStatus('error', 'Browser setup required. Please restart the app to try again.');
-  }
 
   app.on('activate', () => {
     // macOS: re-create window when dock icon clicked

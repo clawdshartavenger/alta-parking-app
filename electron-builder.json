@@ -8,6 +8,12 @@
     "src/**/*",
     "package.json"
   ],
+  "extraResources": [
+    {
+      "from": "chromium-bundle/chromium-1208",
+      "to": "chromium"
+    }
+  ],
   "mac": {
     "category": "public.app-category.utilities",
     "target": [
