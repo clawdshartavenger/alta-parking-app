@@ -8,13 +8,129 @@
  * - Show native macOS notifications
  */
 
-const { app, BrowserWindow, ipcMain, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, Menu, dialog } = require('electron');
 const path = require('path');
+const { autoUpdater } = require('electron-updater');
 const { saveCredentials, loadCredentials } = require('./keychain');
 const { startMonitor } = require('../monitor/parking');
 
 let mainWindow = null;
 let monitorAbortController = null;
+
+// Configure auto-updater
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+/**
+ * Set up the application menu with Check for Updates
+ */
+function createMenu() {
+  const template = [
+    {
+      label: 'Alta Parking Monitor',
+      submenu: [
+        { label: 'About Alta Parking Monitor', role: 'about' },
+        { type: 'separator' },
+        {
+          label: 'Check for Updates...',
+          click: () => checkForUpdates(true)
+        },
+        { type: 'separator' },
+        { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+        { label: 'Redo', accelerator: 'Shift+CmdOrCtrl+Z', role: 'redo' },
+        { type: 'separator' },
+        { label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut' },
+        { label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
+        { label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste' },
+        { label: 'Select All', accelerator: 'CmdOrCtrl+A', role: 'selectAll' }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { label: 'Minimize', accelerator: 'CmdOrCtrl+M', role: 'minimize' },
+        { label: 'Close', accelerator: 'CmdOrCtrl+W', role: 'close' }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
+/**
+ * Check for updates from GitHub releases
+ */
+function checkForUpdates(manual = false) {
+  if (manual) {
+    sendStatus('checking', 'Checking for updates...');
+  }
+  autoUpdater.checkForUpdates().catch((err) => {
+    if (manual) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Update Error',
+        message: 'Failed to check for updates',
+        detail: err.message
+      });
+    }
+  });
+}
+
+// Auto-updater events
+autoUpdater.on('update-available', (info) => {
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'Update Available',
+    message: `Version ${info.version} is available!`,
+    detail: 'Would you like to download and install it?',
+    buttons: ['Download', 'Later'],
+    defaultId: 0,
+    cancelId: 1
+  }).then((result) => {
+    if (result.response === 0) {
+      sendStatus('checking', 'Downloading update...');
+      autoUpdater.downloadUpdate();
+    }
+  });
+});
+
+autoUpdater.on('update-not-available', () => {
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'No Updates',
+    message: 'You have the latest version!',
+  });
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  sendStatus('checking', `Downloading update: ${Math.round(progress.percent)}%`);
+});
+
+autoUpdater.on('update-downloaded', () => {
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'Update Ready',
+    message: 'Update downloaded. The app will restart to install.',
+    buttons: ['Restart Now', 'Later'],
+    defaultId: 0,
+    cancelId: 1
+  }).then((result) => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+});
+
+autoUpdater.on('error', (err) => {
+  sendStatus('error', `Update error: ${err.message}`);
+});
 
 /**
  * Create the main application window
@@ -200,6 +316,7 @@ ipcMain.handle('stop-monitor', async () => {
 // App lifecycle events
 
 app.whenReady().then(() => {
+  createMenu();
   createWindow();
 
   app.on('activate', () => {

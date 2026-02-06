@@ -20,6 +20,10 @@
       {
         "target": "dmg",
         "arch": ["arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["arm64"]
       }
     ],
     "hardenedRuntime": false,
@@ -31,5 +35,10 @@
       { "x": 130, "y": 220 },
       { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
     ]
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "clawdshartavenger",
+    "repo": "alta-parking-app"
   }
 }
