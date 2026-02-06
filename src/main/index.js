@@ -8,18 +8,17 @@
  * - Show native macOS notifications
  */
 
-const { app, BrowserWindow, ipcMain, Notification, Menu, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, Menu, dialog, shell } = require('electron');
 const path = require('path');
-const { autoUpdater } = require('electron-updater');
 const { saveCredentials, loadCredentials } = require('./keychain');
 const { startMonitor } = require('../monitor/parking');
 
 let mainWindow = null;
 let monitorAbortController = null;
 
-// Configure auto-updater
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+const GITHUB_RELEASES_URL = 'https://api.github.com/repos/clawdshartavenger/alta-parking-app/releases/latest';
+const RELEASES_PAGE = 'https://github.com/clawdshartavenger/alta-parking-app/releases/latest';
+const CURRENT_VERSION = require('../../package.json').version;
 
 /**
  * Set up the application menu with Check for Updates
@@ -65,72 +64,67 @@ function createMenu() {
 }
 
 /**
- * Check for updates from GitHub releases
+ * Check for updates from GitHub releases (manual download approach)
  */
-function checkForUpdates(manual = false) {
-  if (manual) {
-    sendStatus('checking', 'Checking for updates...');
-  }
-  autoUpdater.checkForUpdates().catch((err) => {
-    if (manual) {
+async function checkForUpdates() {
+  sendStatus('checking', 'Checking for updates...');
+  
+  try {
+    const response = await fetch(GITHUB_RELEASES_URL, {
+      headers: { 'User-Agent': 'Alta-Parking-Monitor' }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+    
+    const release = await response.json();
+    const latestVersion = release.tag_name.replace(/^v/, '');
+    
+    if (isNewerVersion(latestVersion, CURRENT_VERSION)) {
+      const result = await dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Available',
+        message: `Version ${latestVersion} is available!`,
+        detail: `You have version ${CURRENT_VERSION}.\n\nWould you like to open the download page?`,
+        buttons: ['Download', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+      });
+      
+      if (result.response === 0) {
+        shell.openExternal(RELEASES_PAGE);
+      }
+    } else {
       dialog.showMessageBox(mainWindow, {
-        type: 'error',
-        title: 'Update Error',
-        message: 'Failed to check for updates',
-        detail: err.message
+        type: 'info',
+        title: 'No Updates',
+        message: `You have the latest version (${CURRENT_VERSION})!`,
       });
     }
-  });
+  } catch (err) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'Update Check Failed',
+      message: 'Could not check for updates',
+      detail: err.message
+    });
+  }
 }
 
-// Auto-updater events
-autoUpdater.on('update-available', (info) => {
-  dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: 'Update Available',
-    message: `Version ${info.version} is available!`,
-    detail: 'Would you like to download and install it?',
-    buttons: ['Download', 'Later'],
-    defaultId: 0,
-    cancelId: 1
-  }).then((result) => {
-    if (result.response === 0) {
-      sendStatus('checking', 'Downloading update...');
-      autoUpdater.downloadUpdate();
-    }
-  });
-});
-
-autoUpdater.on('update-not-available', () => {
-  dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: 'No Updates',
-    message: 'You have the latest version!',
-  });
-});
-
-autoUpdater.on('download-progress', (progress) => {
-  sendStatus('checking', `Downloading update: ${Math.round(progress.percent)}%`);
-});
-
-autoUpdater.on('update-downloaded', () => {
-  dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: 'Update Ready',
-    message: 'Update downloaded. The app will restart to install.',
-    buttons: ['Restart Now', 'Later'],
-    defaultId: 0,
-    cancelId: 1
-  }).then((result) => {
-    if (result.response === 0) {
-      autoUpdater.quitAndInstall();
-    }
-  });
-});
-
-autoUpdater.on('error', (err) => {
-  sendStatus('error', `Update error: ${err.message}`);
-});
+/**
+ * Compare version strings (semver)
+ */
+function isNewerVersion(latest, current) {
+  const latestParts = latest.split('.').map(Number);
+  const currentParts = current.split('.').map(Number);
+  
+  for (let i = 0; i < 3; i++) {
+    if ((latestParts[i] || 0) > (currentParts[i] || 0)) return true;
+    if ((latestParts[i] || 0) < (currentParts[i] || 0)) return false;
+  }
+  return false;
+}
 
 /**
  * Create the main application window
