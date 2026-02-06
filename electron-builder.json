@@ -1,6 +1,7 @@
 {
   "appId": "com.alta.parking-monitor",
   "productName": "Alta Parking Monitor",
+  "artifactName": "Alta-Parking-Monitor-${version}-${arch}.${ext}",
   "directories": {
     "output": "dist"
   },
