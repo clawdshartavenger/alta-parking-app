@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Alta Parking Monitor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎿 Alta Parking Monitor</h1>
+      <div id="status-indicator" class="status idle">Idle</div>
+    </header>
+    
+    <form id="config-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required placeholder="your@email.com">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="seasonPass">Season Pass Code</label>
+        <input type="text" id="seasonPass" required placeholder="SP2XXXXXXXX">
+      </div>
+      
+      <div class="form-group">
+        <label for="licensePlate">License Plate</label>
+        <input type="text" id="licensePlate" required placeholder="ABC123">
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="targetDate">Target Date</label>
+          <input type="date" id="targetDate" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="interval">Check Every</label>
+          <select id="interval">
+            <option value="1">1 minute</option>
+            <option value="2">2 minutes</option>
+            <option value="5" selected>5 minutes</option>
+            <option value="10">10 minutes</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="button-row">
+        <button type="submit" id="start-btn">Start Monitoring</button>
+        <button type="button" id="stop-btn" disabled>Stop</button>
+      </div>
+    </form>
+    
+    <div class="log-section">
+      <h3>Status Log</h3>
+      <div id="log" class="log-area"></div>
+    </div>
+  </div>
+  
+  <script src="app.js"></script>
+</body>
+</html>

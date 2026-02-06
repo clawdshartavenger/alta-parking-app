@@ -1,0 +1,11 @@
+# Icon Placeholder
+
+Need to create icon.icns for macOS app.
+
+For now, can generate a simple one or skip (electron-builder will use default).
+
+To create proper icon:
+1. Create 1024x1024 PNG with ski/parking design
+2. Use `iconutil` to convert to .icns
+
+Or use a service like makeappicon.com
