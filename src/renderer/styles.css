@@ -21,13 +21,19 @@ body {
   padding: 24px;
 }
 
-/* Header */
+/* Header - draggable region for window movement */
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
   padding-top: 16px;
+  -webkit-app-region: drag;
+}
+
+/* Make interactive elements in header non-draggable */
+header .status {
+  -webkit-app-region: no-drag;
 }
 
 h1 {
